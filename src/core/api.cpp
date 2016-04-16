@@ -109,7 +109,7 @@
 #include "shapes/paraboloid.h"
 #include "shapes/sphere.h"
 #include "shapes/trianglemesh.h"
-#include "shapes/distanceestimator.h"
+#include "shapes/spherede.h"
 #include "textures/bilerp.h"
 #include "textures/checkerboard.h"
 #include "textures/constant.h"
@@ -351,8 +351,8 @@ Reference<Shape> MakeShape(const string &name,
     else if (name == "nurbs")
         s = CreateNURBSShape(object2world, world2object, reverseOrientation,
                              paramSet);
-    else if (name == "distanceestimator")
-        s = CreateDistanceEstimatorShape(object2world, world2object,
+    else if (name == "spherede")
+        s = CreateSphereDEShape(object2world, world2object,
                               reverseOrientation, paramSet);
     else
         Warning("Shape \"%s\" unknown.", name.c_str());
