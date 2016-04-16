@@ -2,12 +2,26 @@
 #include "geometry.h"
 #include "paramset.h"
 
-DistanceEstimator::DistanceEstimator (const Transform *o2w, const Transform *w2o, bool ro, const DistanceEstimatorParams &DE_params) 
-    : Shape(o2w, w2o, ro), DE_params(DE_params) {
+DistanceEstimatorParams:: DistanceEstimatorParams() {
+  maxIters = 1000;
+  hitEpsilon = 1e-6f;
+  rayEpsilonMultiplier = 2.0f;
+  normalEpsilon = 1e-4f;
 }
 
+DistanceEstimatorParams::DistanceEstimatorParams(const ParamSet &params) {
+  maxIters = params.FindOneInt("maxiters", 1000);
+  hitEpsilon = params.FindOneFloat("hitepsilon", 1e-6f);
+  rayEpsilonMultiplier = params.FindOneFloat("rayepsilonmultiplier", 2.f);
+  normalEpsilon = params.FindOneFloat("normalepsilon", 1e-4f);
+}
+
+DistanceEstimator::DistanceEstimator (const Transform *o2w, const Transform *w2o, bool ro, const DistanceEstimatorParams &DE_params) 
+  : Shape(o2w, w2o, ro), DE_params(DE_params) {
+  }
+
 bool DistanceEstimator::Intersect(const Ray &r, float *tHit, float *rayEpsilon,
-                       DifferentialGeometry *dg) const {
+    DifferentialGeometry *dg) const {
   bool succeed = DoesIntersect(r, tHit);
   if (!succeed) return false;
 

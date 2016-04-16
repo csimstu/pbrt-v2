@@ -20,5 +20,5 @@ float SphereDE::Evaluate(const Point &p) const {
 }
 SphereDE *CreateSphereDEShape(const Transform *o2w, const Transform *w2o, bool reverseOrientation, const ParamSet &params) {
     float radius = params.FindOneFloat("radius", 1.f);
-    return new SphereDE(o2w, w2o, reverseOrientation, DistanceEstimatorParams(), radius);
+    return new SphereDE(o2w, w2o, reverseOrientation, DistanceEstimatorParams(params), radius);
 }

@@ -8,13 +8,8 @@
 #include "shape.h"
 
 struct DistanceEstimatorParams {
-  DistanceEstimatorParams() {
-    maxIters = 1000;
-    hitEpsilon = 1e-6f;
-    rayEpsilonMultiplier = 2.0f;
-    normalEpsilon = 1e-4f;
-  }
-  DistanceEstimatorParams(int maxIters, float hitEpsilon, float rayEpsilonMultiplier, float normalEpsilon): maxIters(maxIters), hitEpsilon(hitEpsilon), rayEpsilonMultiplier(rayEpsilonMultiplier), normalEpsilon(normalEpsilon) {}
+  DistanceEstimatorParams();
+  DistanceEstimatorParams(const ParamSet &params);
 
   int maxIters; // Number of steps along the ray until we give up (default 1000)
   float hitEpsilon; // how close to the surface we must be before we say we "hit" it 
