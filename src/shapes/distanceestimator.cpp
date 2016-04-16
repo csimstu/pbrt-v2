@@ -4,16 +4,16 @@
 
 DistanceEstimatorParams:: DistanceEstimatorParams() {
   maxIters = 1000;
-  hitEpsilon = 1e-6f;
-  rayEpsilonMultiplier = 2.0f;
-  normalEpsilon = 1e-4f;
+  hitEpsilon = 1e-4f;
+  rayEpsilonMultiplier = 1.0f;
+  normalEpsilon = 1e-6f;
 }
 
 DistanceEstimatorParams::DistanceEstimatorParams(const ParamSet &params) {
   maxIters = params.FindOneInt("maxiters", 1000);
   hitEpsilon = params.FindOneFloat("hitepsilon", 1e-6f);
-  rayEpsilonMultiplier = params.FindOneFloat("rayepsilonmultiplier", 2.f);
-  normalEpsilon = params.FindOneFloat("normalepsilon", 1e-4f);
+  rayEpsilonMultiplier = params.FindOneFloat("rayepsilonmultiplier", 1.f);
+  normalEpsilon = params.FindOneFloat("normalepsilon", 1e-6f);
 }
 
 DistanceEstimator::DistanceEstimator (const Transform *o2w, const Transform *w2o, bool ro, const DistanceEstimatorParams &DE_params) 
@@ -37,6 +37,7 @@ bool DistanceEstimator::Intersect(const Ray &r, float *tHit, float *rayEpsilon,
 }
 
 bool DistanceEstimator::IntersectP(const Ray &r) const {
+  return false;
   return DoesIntersect(r, NULL);
 }
 
@@ -58,7 +59,7 @@ bool DistanceEstimator::DoesIntersect(const Ray &r, float *tHit) const {
   (*WorldToObject)(r, &ray);
   float t = Evaluate(ray(ray.mint));
   bool intersected = false;
-  for (int itr = 0; ray.mint <= t && t <= ray.maxt && itr < DE_params.maxIters; itr++) {
+  for (int itr = 0; t <= ray.maxt && itr < DE_params.maxIters; itr++) {
     float dist = Evaluate(ray(t));
     if (fabs(dist) < DE_params.hitEpsilon) {
       intersected = true;
@@ -66,7 +67,7 @@ bool DistanceEstimator::DoesIntersect(const Ray &r, float *tHit) const {
     }
     t += dist;
   }
-  if (!intersected) 
+  if (!intersected || t < ray.mint || t > ray.maxt) 
     return false;
   if (tHit) *tHit = t;
   return true;

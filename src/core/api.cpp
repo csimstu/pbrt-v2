@@ -111,6 +111,7 @@
 #include "shapes/trianglemesh.h"
 #include "shapes/spherede.h"
 #include "shapes/infinitespheregridde.h"
+#include "shapes/mandelbulbde.h"
 #include "textures/bilerp.h"
 #include "textures/checkerboard.h"
 #include "textures/constant.h"
@@ -358,7 +359,9 @@ Reference<Shape> MakeShape(const string &name,
     else if (name == "infinitespheregridde")
         s = CreateInfiniteSphereGridDEShape(object2world, world2object,
                               reverseOrientation, paramSet);
-
+    else if (name == "mandelbulbde")
+        s = CreateMandelbulbDEShape(object2world, world2object,
+                              reverseOrientation, paramSet);
     else
         Warning("Shape \"%s\" unknown.", name.c_str());
     paramSet.ReportUnused();
