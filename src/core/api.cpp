@@ -112,6 +112,7 @@
 #include "shapes/spherede.h"
 #include "shapes/infinitespheregridde.h"
 #include "shapes/mandelbulbde.h"
+#include "shapes/torusde.h"
 #include "textures/bilerp.h"
 #include "textures/checkerboard.h"
 #include "textures/constant.h"
@@ -361,6 +362,9 @@ Reference<Shape> MakeShape(const string &name,
                               reverseOrientation, paramSet);
     else if (name == "mandelbulbde")
         s = CreateMandelbulbDEShape(object2world, world2object,
+                              reverseOrientation, paramSet);
+    else if (name == "torusde")
+        s = CreateTorusDEShape(object2world, world2object,
                               reverseOrientation, paramSet);
     else
         Warning("Shape \"%s\" unknown.", name.c_str());

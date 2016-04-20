@@ -11,8 +11,8 @@ DistanceEstimatorParams:: DistanceEstimatorParams() {
 
 DistanceEstimatorParams::DistanceEstimatorParams(const ParamSet &params) {
   maxIters = params.FindOneInt("maxiters", 1000);
-  hitEpsilon = params.FindOneFloat("hitepsilon", 1e-6f);
-  rayEpsilonMultiplier = params.FindOneFloat("rayepsilonmultiplier", 1.f);
+  hitEpsilon = params.FindOneFloat("hitepsilon", 1e-5f);
+  rayEpsilonMultiplier = params.FindOneFloat("rayepsilonmultiplier", 100.f);
   normalEpsilon = params.FindOneFloat("normalepsilon", 1e-6f);
 }
 
@@ -32,12 +32,13 @@ bool DistanceEstimator::Intersect(const Ray &r, float *tHit, float *rayEpsilon,
   Vector n = CalculateNormal(p, DE_params.normalEpsilon);
   Vector DPDU, DPDV;
   CoordinateSystem(n, &DPDU, &DPDV);
-  *dg = DifferentialGeometry(p, DPDU, DPDV, Normal(), Normal(), 0, 0, this);
+
+  const Transform &o2w = *ObjectToWorld;
+  *dg = DifferentialGeometry(o2w(p), o2w(DPDU), o2w(DPDV), Normal(), Normal(), 0, 0, this);
   return true;
 }
 
 bool DistanceEstimator::IntersectP(const Ray &r) const {
-  return false;
   return DoesIntersect(r, NULL);
 }
 
@@ -57,9 +58,9 @@ Vector DistanceEstimator::CalculateNormal(const Point& pos, float eps) const {
 bool DistanceEstimator::DoesIntersect(const Ray &r, float *tHit) const {
   Ray ray;
   (*WorldToObject)(r, &ray);
-  float t = Evaluate(ray(ray.mint));
+  float t = ray.mint;
   bool intersected = false;
-  for (int itr = 0; t <= ray.maxt && itr < DE_params.maxIters; itr++) {
+  for (int itr = 0; ray.mint <= t && t <= ray.maxt && itr < DE_params.maxIters; itr++) {
     float dist = Evaluate(ray(t));
     if (fabs(dist) < DE_params.hitEpsilon) {
       intersected = true;

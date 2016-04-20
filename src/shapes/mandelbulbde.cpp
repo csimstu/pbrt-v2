@@ -6,8 +6,8 @@ MandelbulbDE::MandelbulbDE (const Transform *o2w, const Transform *w2o, bool ro,
   }
 
 BBox MandelbulbDE::ObjectBound() const {
-  return BBox(Point(-1, -1, -1),
-      Point(1, 1, 1));
+  return BBox(Point(-1e10, -1e10, -1e10),
+      Point(1e10, 1e10, 1e10));
 }
 
 float MandelbulbDE::Area() const {
