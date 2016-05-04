@@ -55,21 +55,30 @@ float RealisticCamera::GenerateRay(const CameraSample &sample,
 
   float lensU, lensV;
   ConcentricSampleDisk(sample.lensU, sample.lensV, &lensU, &lensV);
+  //printf("U,V=(%.3f,%.3f)\n", lensU, lensV);
   const LensInterface &backI = lensdata.back();
   lensU *= backI.aperture / 2;
   lensV *= backI.aperture / 2;
-  Point PBackI = Point(lensU, lensV, filmdistance+filmZ);
+  float backZ = filmdistance + filmZ;
+  //printf("before backZ=%.3f, backI.rad=%.3f,backI.aperture=%.3f\n", backZ, backI.radius, backI.aperture);
+  if (backI.radius > 0) {
+    backZ -= backI.radius - sqrt(backI.radius * backI.radius - backI.aperture * backI.aperture / 4);
+  } else {
+    backZ += -backI.radius - sqrt(backI.radius * backI.radius - backI.aperture * backI.aperture / 4);
+  }
+  //printf("after backZ=%.3f\n", backZ);
+  Point PBackI = Point(lensU, lensV, backZ);
   Vector rayDir = Normalize(PBackI - Pfilm);
   *ray = Ray(Pfilm, rayDir, 0, INFINITY);
   float cosDelta = Dot(ray->d, Vector(0,0,1.f));
-  float weight = pow(cosDelta, 4) * M_PI * (backI.aperture / 2) * (backI.aperture / 2) / (filmdistance * filmdistance);
+  float weight = pow(cosDelta, 4) * M_PI * (backI.aperture / 2) * (backI.aperture / 2) / ((backZ - filmZ) * (backZ - filmZ));
   
   float n_pre = 1.f; // Initially in air
   for (int i = (int)lensdata.size() - 1; i >= 0; i--) {
     const LensInterface &I = lensdata[i];
     Point P; // intersection on the surface
     Vector N; // norm of the surface
-    if (I.radius == 0) {
+    if (fabs(I.radius) < 1e-6f) {
       //aperture stop
       float t = (I.z - ray->o.z) / ray->d.z;
       if (t < 0) {
@@ -82,11 +91,6 @@ float RealisticCamera::GenerateRay(const CameraSample &sample,
       N = Vector(0,0,-1.f);
     } else {
       // First test aperture
-      float t = (I.z - ray->o.z) / ray->d.z;
-      Point tp = (*ray)(t);
-      if (Distance(tp, Point(0,0,I.z)) > I.aperture / 2) {
-        return 0.0f;
-      }
 
       // Then find intersections
       float a = ray->d.LengthSquared();
@@ -102,10 +106,9 @@ float RealisticCamera::GenerateRay(const CameraSample &sample,
       Point p1 = (*ray)(t1);
       Point p2 = (*ray)(t2);
       if (t1 > 0 && t2 > 0) {
-        if (I.radius < 0)
-          P = t1 < t2 ? p1 : p2;
-        else
-          P = t1 > t2 ? p1 : p2;
+        P = t1 < t2 ? p1 : p2;
+        //else
+        //  P = t1 > t2 ? p1 : p2;
       } else {
         if (t1 > 0) {
           P = p1;
@@ -115,6 +118,9 @@ float RealisticCamera::GenerateRay(const CameraSample &sample,
           return 0.0f;
         }
       }
+
+      if (P.x*P.x+P.y*P.y > I.aperture * I.aperture / 4)
+        return 0.0f;
       if (I.radius > 0)
         N = Normalize(I.c - P);
       else
@@ -122,7 +128,7 @@ float RealisticCamera::GenerateRay(const CameraSample &sample,
     }
 
     float n_next = i > 0 ? lensdata[i-1].n : 1.f;
-    if (I.radius != 0) {
+    if (fabs(I.radius) > 1e-6f) {
       float mu = n_pre / n_next;
       float tmp = 1 - mu * mu * (1 - Dot(ray->d, N) * Dot(ray->d, N));
       if (tmp < 0) {
