@@ -11,13 +11,15 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &cam2world,
     float sopen, float sclose,
     float filmdistance, float fstop,
     string specfile, float filmdiag,
+    BokehInfo _bokeh,
     Film *film)
   : Camera(cam2world, sopen, sclose, film), 
   filmdistance(filmdistance), 
   fstop(fstop), 
   specfile(specfile), 
-  filmdiag(filmdiag) 
+  filmdiag(filmdiag)
   {
+    bokeh = _bokeh;
     std::ifstream spec(specfile);
     if (spec.is_open()) {
       string line;
@@ -39,7 +41,40 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &cam2world,
     filmZ = -filmdistance;
     for (LensInterface &I : lensdata)
       filmZ -= I.dz;
+
+    if (bokeh.nblades > 0) {
+      float a = bokeh.offset;
+      float r = fstop / 2;
+      for (int i = 0; i < bokeh.nblades; i++) {
+        Point p1(cos(a) * r, sin(a) * r, 0);
+        Point p2(cos(a+bokeh.theta) * r, sin(a+bokeh.theta) * r, 0);
+        bokeh.blades.push_back(std::make_pair(p1,p2));
+        a += bokeh.delta;
+      }
+    }
   }
+
+static float ScaleTo(float x, float a, float b, float l, float r) {
+  return (x-a)/(b-a)*(r-l)+l;
+}
+
+bool RealisticCamera::TestBokeh(const Point &p) const {
+  if (bokeh.heart) {
+    float x = ScaleTo(p.x,-fstop/2,fstop/2,-4,8);
+    float y = ScaleTo(p.y,-fstop/2,fstop/2,-8,8);
+    return pow(x*x+y*y-10,3)-30*x*x*y*y*y < 0;
+  }
+
+  for (int i = 0; i < (int)bokeh.blades.size(); i++) {
+    Point p1 = bokeh.blades[i].first;
+    Point p2 = bokeh.blades[i].second;
+    Vector v1 = p2 - p1; Vector v2 = p - p1;
+    if (v1.x * v2.y - v2.x * v1.y < 0) {
+      return false;
+    }
+  }
+  return true;
+}
 
 
 float RealisticCamera::GenerateRay(const CameraSample &sample,
@@ -55,18 +90,15 @@ float RealisticCamera::GenerateRay(const CameraSample &sample,
 
   float lensU, lensV;
   ConcentricSampleDisk(sample.lensU, sample.lensV, &lensU, &lensV);
-  //printf("U,V=(%.3f,%.3f)\n", lensU, lensV);
   const LensInterface &backI = lensdata.back();
   lensU *= backI.aperture / 2;
   lensV *= backI.aperture / 2;
   float backZ = filmdistance + filmZ;
-  //printf("before backZ=%.3f, backI.rad=%.3f,backI.aperture=%.3f\n", backZ, backI.radius, backI.aperture);
   if (backI.radius > 0) {
     backZ -= backI.radius - sqrt(backI.radius * backI.radius - backI.aperture * backI.aperture / 4);
   } else {
     backZ += -backI.radius - sqrt(backI.radius * backI.radius - backI.aperture * backI.aperture / 4);
   }
-  //printf("after backZ=%.3f\n", backZ);
   Point PBackI = Point(lensU, lensV, backZ);
   Vector rayDir = Normalize(PBackI - Pfilm);
   *ray = Ray(Pfilm, rayDir, 0, INFINITY);
@@ -85,7 +117,7 @@ float RealisticCamera::GenerateRay(const CameraSample &sample,
         return 0.0f;
       }
       P = (*ray)(t);
-      if (Distance(P, Point(0,0,I.z)) > fstop / 2) {
+      if (Distance(P, Point(0,0,I.z)) > fstop / 2 || !TestBokeh(P)) {
         return 0.0f;
       }
       N = Vector(0,0,-1.f);
@@ -157,9 +189,15 @@ RealisticCamera *CreateRealisticCamera(const ParamSet &params,
   float filmdistance = params.FindOneFloat("filmdistance", 70.0); // about 70 mm default to film
   float fstop = params.FindOneFloat("aperture_diameter", 1.0);
   float filmdiag = params.FindOneFloat("filmdiag", 35.0);
+  RealisticCamera::BokehInfo bokeh;
+  bokeh.heart = params.FindOneBool("bokeh_heart", false);
+  bokeh.nblades = params.FindOneInt("bokeh_nblades", 0);
+  bokeh.offset = params.FindOneFloat("bokeh_offset", 0);
+  bokeh.delta = params.FindOneFloat("bokeh_delta", M_PI / 3);
+  bokeh.theta = params.FindOneFloat("bokeh_theta", M_PI / 3);
   assert(shutteropen != -1 && shutterclose != -1 && filmdistance!= -1);
   if (specfile == "") {
     Severe( "No lens spec file supplied!\n" );
   }
-  return new RealisticCamera(cam2world, shutteropen, shutterclose, filmdistance, fstop, specfile, filmdiag, film);
+  return new RealisticCamera(cam2world, shutteropen, shutterclose, filmdistance, fstop, specfile, filmdiag, bokeh, film);
 }

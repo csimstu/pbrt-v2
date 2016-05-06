@@ -11,13 +11,24 @@
 
 class RealisticCamera : public Camera {
 public:
+    struct BokehInfo {
+      bool heart;
+      int nblades;
+      float offset;
+      float delta;
+      float theta;
+      vector<std::pair<Point,Point>> blades;
+    };
     RealisticCamera(const AnimatedTransform &cam2world,
         float sopen, float sclose,
         float filmdistance, float fstop,
         string specfile, float filmdiag,
+        BokehInfo bokeh,
         Film *film);
     float GenerateRay(const CameraSample &sample, Ray *) const;
 private:
+    bool TestBokeh(const Point &p) const;
+
     struct LensInterface {
       float radius;
       float dz;
@@ -26,6 +37,8 @@ private:
       float aperture;
       Point c;
     };
+
+    BokehInfo bokeh;
 
     float filmdistance;
     float fstop;
